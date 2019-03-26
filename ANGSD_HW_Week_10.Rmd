@@ -1,0 +1,86 @@
+---
+title: "ANGSD_HW_Week_10"
+author: "Paul Gaudin"
+date: "3/25/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+####Exercise 1
+
+#####What do the columns represent? What do the rows represent? 
+
+The column names are the barcodes for each cell, the row names are Gene names, Column x Gene is the gene count for each of the cells with a specified barcode. 
+
+#####Create a SingleCellExperiment object.
+
+```{r message=FALSE}
+folder <- "./"
+
+readcounts <- read.table(paste0(folder, "WT-1.dge.txt"),header=TRUE, row.names=1)
+
+counts_matrix <- as.matrix(readcounts)
+
+library(SingleCellExperiment)
+
+sce <- SingleCellExperiment(assays = list(counts = counts_matrix, logcounts = log10(counts_matrix)))
+sce
+```
+
+#####Show a snippet of the count matrix that is now part of the SCE object.
+```{r message=FALSE}
+counts(sce)[1:10,1:5]
+```
+
+#####Calculate the numbers of reads (~ sequencing depths) for the first five cells, i.e. you should have 5 values in the end.
+```{r message=FALSE}
+for (i in 1:5){
+  print(colnames(counts(sce))[i]) ##barcode
+  print(sum(counts(sce)[,i])) ##sequencing depth
+}
+```
+
+#####How many genes have non-zero counts in the first five cells?
+```{r message=FALSE}
+genes_with_non_zero_counts <- 0
+counts_matrix = counts(sce)
+for (i in 1:nrow(counts_matrix)){
+  if(sum(counts_matrix[i,1:5]) > 0){
+    genes_with_non_zero_counts <- genes_with_non_zero_counts + 1
+  }
+}
+
+genes_with_non_zero_counts
+```
+
+#####If you were to change the row- and column-names of the original matrix, how could you keep track of the original names? 
+
+You could create an object that has keys that are the new row or column names, and values that are the original row and column names. 
+
+#####Following the simpleSingleCell workflow, generate histograms or density plots of (a) the total number of UMI counts per cell and (b) total number of expressed genes. (1pt plus 1pt extra-credit if you generate the plots with ggplot2).
+
+```{r message=FALSE}
+
+#calculateQCMetrics(sce)
+
+total_expressed_genes = c()
+total_umi_count = c();
+for (i in 1:ncol(counts_matrix)){
+  total_expressed_genes = c(total_expressed_genes,sum(counts_matrix[,i] > 0))
+}
+
+total_UMI_count = c();
+for (i in 1:ncol(counts_matrix)){
+  total_umi_count = c(total_umi_count,sum(counts_matrix[,i]))
+}
+
+hist(log10(total_expressed_genes), breaks=30, col="grey80",
+    xlab="Log10-total expressed genes")
+
+hist(log10(total_umi_count), breaks=30, col="grey80",
+    xlab="Log10-total UMI count")
+
+```
