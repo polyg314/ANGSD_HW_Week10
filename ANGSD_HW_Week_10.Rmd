@@ -72,15 +72,47 @@ for (i in 1:ncol(counts_matrix)){
   total_expressed_genes = c(total_expressed_genes,sum(counts_matrix[,i] > 0))
 }
 
+
+#hist(log10(total_expressed_genes), breaks=30, col="grey80",xlab="Log10-total expressed genes")
+
+#hist(log10(total_umi_count), breaks=30, col="grey80",xlab="Log10-total UMI count")
+
+library(ggplot2)
+
+df_eg = data.frame(colnames(sce),total_expressed_genes)
+
+ggplot(df_eg, aes(x=total_expressed_genes)) + geom_histogram() + geom_histogram(bins = 30) + xlab("Total Expressed Genes") + ggtitle("Histogram for Number of Expressed Genes per Cell") 
+
+
 total_UMI_count = c();
 for (i in 1:ncol(counts_matrix)){
   total_umi_count = c(total_umi_count,sum(counts_matrix[,i]))
 }
 
-hist(log10(total_expressed_genes), breaks=30, col="grey80",
-    xlab="Log10-total expressed genes")
+df_umi = data.frame(colnames(sce), total_umi_count)
+ggplot(df_umi, aes(x=total_umi_count)) + geom_histogram() + geom_histogram(bins = 30) + xlab("Total UMI's") + ggtitle("Histogram for Number of UMI's per Cell") 
 
-hist(log10(total_umi_count), breaks=30, col="grey80",
-    xlab="Log10-total UMI count")
+mt_genes <- c();
 
+for (i in 1:nrow(counts_matrix)){
+  if (grepl("MT-", rownames(counts_matrix)[i])){
+    mt_genes <- c(mt_genes, rownames(counts_matrix)[i])
+  }
+}
+
+mt_count_matrix = subset(counts_matrix, rownames(counts_matrix) %in% mt_genes)
+
+
+total_mt_count = c();
+
+for (i in 1:ncol(mt_count_matrix)){
+  total_mt_count = c(total_mt_count,sum(mt_count_matrix[,i]))
+}
+
+mt_percentage = 100*round(total_mt_count / total_umi_count,3)
+
+df_mt_percentage = data.frame(colnames(sce), mt_percentage)
+ggplot(df_mt_percentage, aes(x=mt_percentage)) + geom_histogram() + geom_histogram(bins = 30) + xlab("Percentage MT DNA") + ggtitle("Perecentage MT DNA per Cell") 
 ```
+
+
