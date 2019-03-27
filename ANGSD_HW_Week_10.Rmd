@@ -109,10 +109,85 @@ for (i in 1:ncol(mt_count_matrix)){
   total_mt_count = c(total_mt_count,sum(mt_count_matrix[,i]))
 }
 
-mt_percentage = 100*round(total_mt_count / total_umi_count,3)
+mt_percentage <- 100*round(total_mt_count / total_umi_count,3)
 
 df_mt_percentage = data.frame(colnames(sce), mt_percentage)
 ggplot(df_mt_percentage, aes(x=mt_percentage)) + geom_histogram() + geom_histogram(bins = 30) + xlab("Percentage MT DNA") + ggtitle("Perecentage MT DNA per Cell") 
 ```
 
+#####Decide on some threshold for either QC parameter and remove the corresponding cells.
+
+Remove cells with MT-DNA percentage over 30%
+
+Bottom and top 5% UMI - remove empty droplets as well as doublets.
+
+```{r message=FALSE}
+umi_sorted <- sort(total_umi_count)
+
+umi_bottom_cutoff_index <- length(total_umi_count) * 0.05
+
+umi_top_cutoff_index <- length(total_umi_count) * 0.95
+
+umi_bottom_cutoff <- umi_sorted[umi_bottom_cutoff_index]
+
+umi_top_cutoff <- umi_sorted[umi_top_cutoff_index]
+
+normalized_counts_matrix <- counts_matrix
+
+mt_remove_vector <- c();
+
+for (i in 1:length(mt_percentage)){
+  if (!is.na(mt_percentage[i])){
+    if (mt_percentage[i] > 30){
+      mt_remove_vector <- c(mt_remove_vector, i)
+    }    
+  }
+}
+
+normalized_counts_matrix <- normalized_counts_matrix[,-mt_remove_vector]
+
+
+i = 1
+while (i < ncol(normalized_counts_matrix)){
+  if(sum(normalized_counts_matrix[,i]) < umi_bottom_cutoff | sum(normalized_counts_matrix[,i]) > umi_top_cutoff){
+    normalized_counts_matrix <- normalized_counts_matrix[,-i]
+  }
+  i <- i + 1
+}
+
+
+```
+
+
+#####Using the filtered data set, normalize the counts using scran and scater and judge whether the size factors calculated by  computeSumFactors show the expected behavior as shown in Figure 6 of the simpleSingleCell workflow.
+
+```{r message=FALSE}
+library(scran)
+
+normalized.sce <- SingleCellExperiment(list(counts=normalized_counts_matrix))
+clusters <- quickCluster(normalized.sce, min.size=100)
+normalized.sce <- computeSumFactors(normalized.sce, cluster=clusters)
+
+#library(scater)
+#rownames(sce) <- uniquifyFeatureNames(rowData(normalized.sce)$ID, rowData(normalized.sce)$Symbol)
+#head(rownames(sce))
+
+
+normalized_total_count = c();
+for (i in 1:ncol(normalized_counts_matrix)){
+  normalized_total_count = c(normalized_total_count,sum(count(normalized_counts_matrix[,i])))
+}
+
+plot(normalized_total_count, sizeFactors(normalized.sce), log="xy")
+
+```
+
+
+######How can you access the normalized data matrix?
+
+As seen above, you can access the normalized data matrix via normalized.sce, for example: 
+
+```{r}
+summary(sizeFactors(normalized.sce))
+```
 
