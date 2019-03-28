@@ -161,8 +161,6 @@ while (i < ncol(normalized_counts_matrix)){
 
 #####Using the filtered data set, normalize the counts using scran and scater and judge whether the size factors calculated by  computeSumFactors show the expected behavior as shown in Figure 6 of the simpleSingleCell workflow.
 
-Do something here 
-
 ```{r message=FALSE}
 library(scran)
 library(scater)
@@ -242,11 +240,35 @@ for (i in cells){
 }
 
 plot(first_10_sce,first_10_seurat, log="xy")
-#plot(first_10_sce,first_10_seurat)
+
 ```
 
 
 ####Exercise 3. What types of cells do you think you’re looking at?
 
+To determine what cells we are examing, one can look at the most highly expressed genes (and thereby proteins for protein coding genes) to determine which cell population is present. Below, I will look at the Top 40 most highly expressed genes among the mainly homogenous population. 
 
+```{r}
 
+genes_counts <- c()
+for (i in 1:nrow(counts_matrix)){
+  genes_counts <- c(genes_counts, sum(counts_matrix[i,]))
+}
+
+genes_counts_sorted <- sort(genes_counts, decreasing = TRUE)
+
+top_40_cutoff <- genes_counts_sorted[41]
+
+genes = rownames(counts_matrix)
+top_40_genes = c();
+
+for (i in 1:nrow(counts_matrix)){
+  if(sum(counts_matrix[i,]) > top_40_cutoff){
+    top_40_genes = c(top_40_genes, genes[i]);
+  }
+}
+
+top_40_genes
+```
+
+When investigating the Top 40 genes, a number of the genes are indicative of the cell type, including CER1, ACTG1, NCL, VIM, PTMA, and PABC1. According to scRNASeqDB (https://bioinfo.uth.edu/scrnaseqdb/), these genes are all very highly expressed in human embryonic stem cells, which I am predicting the WT-1 cells originated from. 
