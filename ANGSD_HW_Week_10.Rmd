@@ -24,6 +24,8 @@ readcounts <- read.table(paste0(folder, "WT-1.dge.txt"),header=TRUE, row.names=1
 
 counts_matrix <- as.matrix(readcounts)
 
+readcounts$GENE <- NULL
+
 library(SingleCellExperiment)
 
 sce <- SingleCellExperiment(assays = list(counts = counts_matrix, logcounts = log10(counts_matrix)))
@@ -63,8 +65,6 @@ You could create an object that has keys that are the new row or column names, a
 #####Following the simpleSingleCell workflow, generate histograms or density plots of (a) the total number of UMI counts per cell and (b) total number of expressed genes. (1pt plus 1pt extra-credit if you generate the plots with ggplot2).
 
 ```{r message=FALSE}
-
-#calculateQCMetrics(sce)
 
 total_expressed_genes = c()
 total_umi_count = c();
@@ -161,19 +161,19 @@ while (i < ncol(normalized_counts_matrix)){
 
 #####Using the filtered data set, normalize the counts using scran and scater and judge whether the size factors calculated by  computeSumFactors show the expected behavior as shown in Figure 6 of the simpleSingleCell workflow.
 
+Do something here 
+
 ```{r message=FALSE}
 library(scran)
+library(scater)
 
-normalized.sce <- SingleCellExperiment(list(counts=normalized_counts_matrix))
-clusters <- quickCluster(normalized.sce, min.size=100)
-normalized.sce <- computeSumFactors(normalized.sce, cluster=clusters)
+normalized.sce <- SingleCellExperiment(assays = list(counts = normalized_counts_matrix, logcounts = log10(normalized_counts_matrix)))
 
-#library(scater)
-#rownames(sce) <- uniquifyFeatureNames(rowData(normalized.sce)$ID, rowData(normalized.sce)$Symbol)
-#head(rownames(sce))
-
+normalized.sce <- scran::computeSumFactors(normalized.sce)
+normalized.sce <- normalize(normalized.sce)
 
 normalized_total_count = c();
+
 for (i in 1:ncol(normalized_counts_matrix)){
   normalized_total_count = c(normalized_total_count,sum(count(normalized_counts_matrix[,i])))
 }
@@ -189,5 +189,64 @@ As seen above, you can access the normalized data matrix via normalized.sce, for
 
 ```{r}
 summary(sizeFactors(normalized.sce))
+
+counts(normalized.sce)[1:10,1:5]
 ```
+
+####Exercise 2. scRNA-seq data wrangling in R using Seurat.
+
+#####Create a Seurat object (function: Seurat::CreateSeuratObject)
+
+```{r}
+library(Seurat)
+seurat <- CreateSeuratObject(raw.data = readcounts)
+```
+#####Perform the same filtering that you chose to do on the SCE object. (1pt)
+```{r}
+
+seurat.filtered <- FilterCells(object = seurat, subset.names = c("nGene"), low.thresholds = c(umi_bottom_cutoff), high.thresholds = c(umi_top_cutoff))
+
+```
+
+
+#####Normalize the data using Seurat’s function for this (NormalizeData). (.5pt)
+
+```{r}
+seurat.filtered.normalized <- NormalizeData(object = seurat.filtered, normalization.method = "LogNormalize", scale.factor = 10000)
+
+```
+
+######How can you access the normalized data matrix? (Answer 7 of Seurat’s FAQ should be helpful here) (0.5pts)
+You can access the normalized data matrix via seurat.filtered.normalized@data, for example: 
+```{r}
+seurat.filtered.normalized@data[1:5,1:10]
+```
+
+#####For the first 10 cells, do pairwise comparisons for each cell of the normalized values from the Seurat object and the SCE object (scatter plots are fine; you may want to check out the GGally package, specifically the ggpairs function. We also recommend to remove genes that have zero counts in all the samples). Explain what you see. (2pts)
+
+```{r}
+first_10_sce = c()
+first_10_seurat = c()
+norm_sce_log_counts = logcounts(normalized.sce)
+
+cells = c("CCCCCATTATGC","ATTCCCGAGTCA","GTCTTCTCCCAT","TTCCAGCCTCGG","TTCGCTGAAAAC","ACTAAGTAAGCT","GTTTTCTACAGC","CCGTCTGGTGAC","CACTTTCTTGTC","ATAATGACGGCT") ## make sure to compare identical cells
+
+
+for (i in cells){
+  for (j in 1:nrow(normalized_counts_matrix)){
+    if(normalized_counts_matrix[j,i] > 0 && seurat.filtered.normalized@data[j,i] > 0){
+      first_10_sce = c(first_10_sce,norm_sce_log_counts[j,i])
+      first_10_seurat = c(first_10_seurat, seurat.filtered.normalized@data[j,i])      
+    }
+  }
+}
+
+plot(first_10_sce,first_10_seurat, log="xy")
+#plot(first_10_sce,first_10_seurat)
+```
+
+
+####Exercise 3. What types of cells do you think you’re looking at?
+
+
 
